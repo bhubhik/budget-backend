@@ -10,11 +10,19 @@ app.use(bodyParser.json());
 
 app.use(cors());
 
-app.post('/expense', async (req, res) => {
+app.post('/entry', async (req, res) => {
   try {
-    const { description, amount, type } = req.body;
-    const query =
-      'INSERT INTO expenses (description, type, amount) VALUES ($1, $2, $3) RETURNING *';
+    const { description, amount, type, entryType } = req.body;
+    let tableName;
+    if (entryType === 'expense') {
+      tableName = 'expenses';
+    } else if (entryType === 'income') {
+      tableName = 'income';
+    } else {
+      return res.status(400).json({ error: 'Invalid entry type.' });
+    }
+
+    const query = `INSERT INTO ${tableName} (description, type, amount) VALUES ($1, $2, $3) RETURNING *`;
     const values = [description, type, amount];
 
     const result = await pool.query(query, values);
