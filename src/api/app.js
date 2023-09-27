@@ -21,9 +21,11 @@ app.post('/entry', async (req, res) => {
     } else {
       return res.status(400).json({ error: 'Invalid entry type.' });
     }
+    const currentDate = new Date();
+    const formattedDate = currentDate.toISOString().split('T')[0];
 
-    const query = `INSERT INTO ${tableName} (description, type, amount) VALUES ($1, $2, $3) RETURNING *`;
-    const values = [description, type, amount];
+    const query = `INSERT INTO ${tableName} (description, type, amount, date) VALUES ($1, $2, $3, $4) RETURNING *`;
+    const values = [description, type, amount, formattedDate];
 
     const result = await pool.query(query, values);
 
