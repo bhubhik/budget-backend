@@ -67,6 +67,35 @@ app.get('/expense', async (req, res) => {
   }
 });
 
+app.get('/expenses', async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const firstDayOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1
+    ).toISOString();
+    const lastDayOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      0
+    ).toISOString();
+
+    const query = `
+    SELECT * 
+    FROM expenses 
+    WHERE date::DATE >= $1::DATE AND date::DATE <= $2::DATE`;
+
+    const values = [firstDayOfMonth, lastDayOfMonth];
+    const result = await pool.query(query, values);
+    const expenses = result.rows || [];
+    res.json({ expenses });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch expenses.' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is runnin on port ${port}.`);
 });
