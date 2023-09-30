@@ -67,8 +67,9 @@ app.get('/expense', async (req, res) => {
   }
 });
 
-app.get('/expenses', async (req, res) => {
+app.get('/entries/:tableType', async (req, res) => {
   try {
+    const { tableType } = req.params;
     const currentDate = new Date();
     const firstDayOfMonth = new Date(
       currentDate.getFullYear(),
@@ -84,9 +85,20 @@ app.get('/expenses', async (req, res) => {
       59
     ).toISOString();
 
+    let tableName;
+
+    if (tableType === 'income') {
+      tableName = 'income';
+    } else if (tableType === 'expenses') {
+      tableName = 'expenses';
+    } else {
+      res.status(400).json({ error: 'Invalid table type.' });
+      return;
+    }
+
     const query = `
     SELECT * 
-    FROM expenses 
+    FROM ${tableName} 
     WHERE date::DATE >= $1::DATE AND date::DATE <= $2::DATE`;
 
     const values = [firstDayOfMonth, lastDayOfMonth];
