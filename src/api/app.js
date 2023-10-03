@@ -7,10 +7,38 @@ const app = express();
 const port = 3001;
 
 app.use(bodyParser.json());
-
 app.use(cors());
 
-//Insert the entry to either income or expense table
+const timezoneOptions = {
+  timeZone: 'Australia/Sydney',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+};
+
+function getFirstDayOfMonth() {
+  const currentDate = new Date();
+  const firstDayOfMonth = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth(),
+    1
+  );
+
+  return firstDayOfMonth.toLocaleDateString(undefined, timezoneOptions);
+}
+
+function getLastDayOfMonth() {
+  const currentDate = new Date();
+  const lastDayOfMonth = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth() + 1,
+    0
+  );
+
+  return lastDayOfMonth.toLocaleDateString(undefined, timezoneOptions);
+}
+
+// Insert the entry to either income or expense table
 app.post('/entry', async (req, res) => {
   try {
     const { description, amount, type, entryType } = req.body;
@@ -37,20 +65,11 @@ app.post('/entry', async (req, res) => {
   }
 });
 
-//To get the total expenses
+// To get the total expenses
 app.get('/expense', async (req, res) => {
   try {
-    const currentDate = new Date();
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    ).toISOString();
-    const lastDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    ).toISOString();
+    const firstDayOfMonth = getFirstDayOfMonth();
+    const lastDayOfMonth = getLastDayOfMonth();
 
     const query = `
     SELECT SUM(amount) as "totalExpense" 
@@ -70,20 +89,8 @@ app.get('/expense', async (req, res) => {
 app.get('/entries/:tableType', async (req, res) => {
   try {
     const { tableType } = req.params;
-    const currentDate = new Date();
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    ).toISOString();
-    const lastDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0,
-      23,
-      59,
-      59
-    ).toISOString();
+    const firstDayOfMonth = getFirstDayOfMonth();
+    const lastDayOfMonth = getLastDayOfMonth();
 
     let tableName;
 
