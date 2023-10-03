@@ -38,27 +38,37 @@ function getLastDayOfMonth() {
   return lastDayOfMonth.toLocaleDateString(undefined, timezoneOptions);
 }
 
+//Helper to get a table name
+const getTableName = (entryType) => {
+  if (entryType === 'expense') {
+    return 'expenses';
+  } else if (entryType === 'income') {
+    return 'income';
+  } else {
+    throw new Error('Invalid entry type.');
+  }
+};
+
 // Insert the entry to either income or expense table
 app.post('/entry', async (req, res) => {
   try {
     const { description, amount, type, entryType } = req.body;
-    let tableName;
-    if (entryType === 'expense') {
-      tableName = 'expenses';
-    } else if (entryType === 'income') {
-      tableName = 'income';
-    } else {
-      return res.status(400).json({ error: 'Invalid entry type.' });
+
+    try {
+      const tableName = getTableName(entryType);
+      const currentDate = new Date();
+      const formattedDate = currentDate.toISOString().split('T')[0];
+
+      const query = `INSERT INTO ${tableName} (description, type, amount, date) VALUES ($1, $2, $3, $4) RETURNING *`;
+      const values = [description, type, amount, formattedDate];
+
+      const result = await pool.query(query, values);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: error.message });
     }
-    const currentDate = new Date();
-    const formattedDate = currentDate.toISOString().split('T')[0];
-
-    const query = `INSERT INTO ${tableName} (description, type, amount, date) VALUES ($1, $2, $3, $4) RETURNING *`;
-    const values = [description, type, amount, formattedDate];
-
-    const result = await pool.query(query, values);
-
-    res.json(result.rows[0]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to add expense' });
@@ -92,29 +102,45 @@ app.get('/entries/:tableType', async (req, res) => {
     const firstDayOfMonth = getFirstDayOfMonth();
     const lastDayOfMonth = getLastDayOfMonth();
 
-    let tableName;
+    try {
+      const tableName = getTableName(tableType);
+      const query = `
+        SELECT * 
+        FROM ${tableName} 
+        WHERE date::DATE >= $1::DATE AND date::DATE <= $2::DATE`;
 
-    if (tableType === 'income') {
-      tableName = 'income';
-    } else if (tableType === 'expenses') {
-      tableName = 'expenses';
-    } else {
-      res.status(400).json({ error: 'Invalid table type.' });
-      return;
+      const values = [firstDayOfMonth, lastDayOfMonth];
+      const result = await pool.query(query, values);
+      const expenses = result.rows || [];
+      res.json({ expenses });
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: error.message });
     }
-
-    const query = `
-    SELECT * 
-    FROM ${tableName} 
-    WHERE date::DATE >= $1::DATE AND date::DATE <= $2::DATE`;
-
-    const values = [firstDayOfMonth, lastDayOfMonth];
-    const result = await pool.query(query, values);
-    const expenses = result.rows || [];
-    res.json({ expenses });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch expenses.' });
+  }
+});
+
+//Request to delete an entry
+app.delete('/entries/:tableType/:id', async (req, res) => {
+  try {
+    const { tableType, id } = req.params;
+    const tableName = getTableName(tableType);
+
+    const query = `
+    DELETE FROM ${tableName}
+    WHERE id = $1
+    `;
+    const result = await pool.query(query, [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Entry not found.' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting entry:', error);
+    res.status(500).json({ error: 'Failed to delete entry.' });
   }
 });
 
