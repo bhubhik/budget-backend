@@ -40,7 +40,7 @@ function getLastDayOfMonth() {
 
 //Helper to get a table name
 const getTableName = (entryType) => {
-  if (entryType === 'expense') {
+  if (entryType === 'expenses') {
     return 'expenses';
   } else if (entryType === 'income') {
     return 'income';
@@ -127,17 +127,22 @@ app.get('/entries/:tableType', async (req, res) => {
 app.delete('/entries/:tableType/:id', async (req, res) => {
   try {
     const { tableType, id } = req.params;
-    const tableName = getTableName(tableType);
+    try {
+      const tableName = getTableName(tableType);
 
-    const query = `
+      const query = `
     DELETE FROM ${tableName}
     WHERE id = $1
     `;
-    const result = await pool.query(query, [id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Entry not found.' });
+      const result = await pool.query(query, [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Entry not found.' });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: error.message });
     }
-    res.status(204).send();
   } catch (error) {
     console.error('Error deleting entry:', error);
     res.status(500).json({ error: 'Failed to delete entry.' });
