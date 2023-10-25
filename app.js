@@ -1,12 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const pool = require('./db');
+const pool = require('./src/db');
 const {
   getTableName,
   getFirstDayOfMonth,
   getLastDayOfMonth,
-} = require('./utils');
+} = require('./src/utils');
 
 const app = express();
 const port = 3001;
